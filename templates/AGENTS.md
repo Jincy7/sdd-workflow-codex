@@ -1,29 +1,26 @@
 # Codex Project Instructions
 
-Use the global `sdd-workflow` skill for non-trivial product, feature, refactor, bugfix, and release work.
+Use the official installed SDD stack through the `sdd-control-plane` skill.
 
 ## Context Isolation
 
-- Only use SDD context from this repository's `.sdd/` directory.
-- Do not reuse decisions, specs, architecture notes, or project knowledge from other repositories unless the user explicitly provides them in this thread.
-- When switching projects, re-read this repository's `AGENTS.md` and `.sdd/state/PROJECT.md` before making assumptions.
+- Treat this repository as the context boundary.
+- Do not reuse GSD plans, gstack learnings, Superpowers plan files, or project notes from another repository unless the user explicitly provides them.
+- When switching projects, re-read this file before choosing workflow state.
 
-## SDD Workflow
+## Stack Routing
 
-Choose the smallest workflow tier that fits:
+- GSD (`$gsd-*`) owns durable project planning, codebase maps, phases, execution state, and verification.
+- Superpowers owns engineering discipline: brainstorming, writing plans, TDD, systematic debugging, verification, and code-review loops.
+- gstack (`$gstack-*`) owns role-based review, QA, security, browser workflows, release, and retrospectives.
+- `sdd-control-plane` decides which upstream stack to use next; it should not replace the upstream workflows.
 
-- Tiny: direct fix plus verification.
-- Standard: gstack decision check, GSD context update, Superpowers execution loop.
-- Long-running: full SDD run with milestone state, decision log, review, QA, ship, and reflect.
+## Default Flow
 
-## Operating Rules
-
-- Keep work scoped to the current "lake": one coherent feature, fix, or milestone.
-- Use gstack-style roles for judgment: office-hours, CEO, engineering, design, staff review, QA, release, retrospective.
-- Use GSD-style durable files for context: project state, decisions, knowledge, feature specs, roadmaps, plans, review notes.
-- Use Superpowers-style execution: plan in small tasks, prefer TDD when behavior changes, verify before completion.
-- If requirements are unclear, resolve decision risk before coding.
-- If context may drift across sessions, update `.sdd/state/` before and after implementation.
-- If implementation discovers an uncovered architectural decision, stop and record the decision before continuing.
-- Never call a task done until verification evidence is recorded.
+1. Use `$gsd-new-project` if this repository has not been initialized for GSD.
+2. Use `$gsd-map-codebase` when codebase context is stale or missing.
+3. Use `$gstack-office-hours` and `$gstack-plan-ceo-review` for fuzzy product work.
+4. Use `$gsd-spec-phase` or `$gsd-plan-phase` for durable planning.
+5. Use Superpowers `test-driven-development` and `executing-plans` during implementation.
+6. Use `$gstack-review`, `$gstack-qa`, `$gsd-verify-work`, and Superpowers `verification-before-completion` before completion.
 

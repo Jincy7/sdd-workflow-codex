@@ -1,26 +1,27 @@
 # Codex Project Instructions
 
-Use the local SDD workflow for non-trivial product, feature, refactor, bugfix, and release work.
+This repository builds an SDD control plane for Codex.
 
-## SDD Workflow
+## Current Goal
 
-Before implementing, use the global `sdd-workflow` skill if it is installed. When working inside this repository, the source skill lives at [skills/sdd-workflow/SKILL.md](skills/sdd-workflow/SKILL.md).
+Install and orchestrate the real upstream stack:
 
-Choose the smallest workflow tier that fits:
+- Official GSD for Codex.
+- Official Superpowers for Codex.
+- Official gstack for Codex.
+- A thin `sdd-control-plane` skill that routes between them.
 
-- Tiny: direct fix plus verification.
-- Standard: gstack decision check, GSD context update, Superpowers execution loop.
-- Long-running: full SDD run with milestone state, decision log, review, QA, ship, and reflect.
+## Boundaries
 
-## Operating Rules
+- Do not describe this repo as a replacement implementation of GSD, Superpowers, or gstack.
+- Do not duplicate upstream workflow logic when the upstream skill can own it.
+- Keep project initialization minimal: `AGENTS.md` plus `.sdd-control/` routing notes.
+- Use prefixed gstack skills (`gstack-*`) to avoid collisions.
 
-- Keep work scoped to the current "lake": one coherent feature, fix, or milestone.
-- Use gstack-style roles for judgment: office-hours, CEO, engineering, design, staff review, QA, release, retrospective.
-- Use GSD-style durable files for context: project state, decisions, knowledge, feature specs, roadmaps, plans, review notes.
-- Use Superpowers-style execution: plan in small tasks, prefer TDD when behavior changes, verify before completion.
-- If requirements are unclear, resolve decision risk before coding.
-- If context may drift across sessions, update `.sdd/state/` before and after implementation.
-- If implementation discovers an uncovered architectural decision, stop and record the decision before continuing.
-- Never call a task done until verification evidence is recorded.
-- Only read/write `.sdd/` from the current repository root. Do not mix SDD state across projects.
+## Verification
+
+- Fast test: `./scripts/test_install.sh`.
+- Real upstream test without gstack: `./scripts/test_real_upstreams.sh`.
+- Full real upstream test: `./scripts/test_real_upstreams.sh --include-gstack`.
+- Status check: `./scripts/sdd-control-plane.sh status`.
 

@@ -3,32 +3,34 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmp_dir="$(mktemp -d)"
-trap 'rm -rf "${tmp_dir}"' EXIT
+trap 'rm -rf "$tmp_dir"' EXIT
 
-export CODEX_HOME="${tmp_dir}/codex-home"
-project_dir="${tmp_dir}/project"
-mkdir -p "${project_dir}"
+export HOME="$tmp_dir/home"
+export SDD_CP_MOCK=1
+project_dir="$tmp_dir/project"
+mkdir -p "$project_dir"
 
-"${repo_root}/install.sh" >/dev/null
-test -f "${CODEX_HOME}/skills/sdd-workflow/SKILL.md"
+"$repo_root/install.sh" >/tmp/sdd-control-plane-install.log
+test -f "$HOME/.codex/skills/sdd-control-plane/SKILL.md"
+test -f "$HOME/.codex/get-shit-done/VERSION"
+test -L "$HOME/.agents/skills/superpowers"
+test -f "$HOME/.codex/skills/gstack-review/SKILL.md"
 
-"${repo_root}/scripts/init_project.sh" "${project_dir}" >/dev/null
-test -f "${project_dir}/AGENTS.md"
-test -f "${project_dir}/.sdd/state/PROJECT.md"
-test -x "${project_dir}/.sdd/scripts/new_feature.sh"
+"$repo_root/scripts/sdd-control-plane.sh" status >/tmp/sdd-control-plane-status.log
+grep -q 'ok   GSD' /tmp/sdd-control-plane-status.log
+grep -q 'ok   Superpowers' /tmp/sdd-control-plane-status.log
+grep -q 'ok   gstack' /tmp/sdd-control-plane-status.log
+grep -q 'ok   Control plane' /tmp/sdd-control-plane-status.log
 
-(
-  cd "${project_dir}"
-  ".sdd/scripts/new_feature.sh" sample-feature >/dev/null
-  spec_dir="$(find .sdd/specs -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-  test -f "${spec_dir}/FEATURE-SPEC.md"
-  test -f "${spec_dir}/PLAN.md"
-  test -f "${spec_dir}/VERIFY.md"
-)
+"$repo_root/scripts/init_project.sh" "$project_dir" >/tmp/sdd-control-plane-init.log
+test -f "$project_dir/AGENTS.md"
+test -f "$project_dir/.sdd-control/STACKS.md"
+test -f "$project_dir/.sdd-control/PROJECT.md"
 
-bash -n "${repo_root}/install.sh"
-bash -n "${repo_root}/scripts/init_project.sh"
-bash -n "${repo_root}/templates/scripts/new_feature.sh"
+bash -n "$repo_root/install.sh"
+bash -n "$repo_root/scripts/sdd-control-plane.sh"
+bash -n "$repo_root/scripts/init_project.sh"
+bash -n "$repo_root/scripts/test_install.sh"
 
-echo "All install tests passed"
+echo "All mock control-plane tests passed"
 
