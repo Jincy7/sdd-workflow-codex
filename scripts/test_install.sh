@@ -12,6 +12,8 @@ mkdir -p "$project_dir"
 git -C "$project_dir" init -q
 mkdir -p "$project_dir/.planning"
 printf '%s\n' '{"commit_docs":true}' > "$project_dir/.planning/config.json"
+mkdir -p "$project_dir/docs/superpowers/specs"
+printf '%s\n' '# Sample Superpowers Spec' > "$project_dir/docs/superpowers/specs/sample.md"
 mkdir -p "$HOME/.codex/skills/old-skill.backup.20000101000000"
 printf '%s\n' '---' 'name: old-skill' 'description: invalid: unquoted' '---' > "$HOME/.codex/skills/old-skill.backup.20000101000000/SKILL.md"
 
@@ -46,7 +48,8 @@ grep -q 'BEGIN sdd-control-plane personal workflow' "$project_dir/.git/info/excl
 grep -q '^AGENTS.md$' "$project_dir/.git/info/exclude"
 grep -q '^.sdd-control/$' "$project_dir/.git/info/exclude"
 grep -q '^.planning/$' "$project_dir/.git/info/exclude"
-test "$(git -C "$project_dir" status --short -- AGENTS.md .sdd-control .planning)" = ""
+grep -q '^docs/superpowers/$' "$project_dir/.git/info/exclude"
+test "$(git -C "$project_dir" status --short -- AGENTS.md .sdd-control .planning docs/superpowers)" = ""
 test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).commit_docs)' "$project_dir/.planning/config.json")" = "false"
 
 team_dir="$tmp_dir/team-project"
@@ -72,10 +75,14 @@ test -f "$project_dir/.sdd-control/project.json"
 test -f "$artifacts_dir/projects/compass-a2a/manifest.json"
 test -f "$artifacts_dir/projects/compass-a2a/planning/config.json"
 test -f "$artifacts_dir/projects/compass-a2a/sdd-control/project.json"
+test -f "$artifacts_dir/projects/compass-a2a/superpowers/specs/sample.md"
 test -f "$artifacts_dir/registry/projects.json"
 grep -q 'uhdc-compass' "$artifacts_dir/projects/compass-a2a/manifest.json"
+grep -q '"local_name": "project"' "$artifacts_dir/projects/compass-a2a/manifest.json"
+! grep -q 'artifacts_repo' "$project_dir/.sdd-control/project.json"
+! grep -q 'artifacts_repo' "$artifacts_dir/projects/compass-a2a/manifest.json"
 
-rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS.md"
+rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS.md" "$project_dir/docs/superpowers"
 "$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$project_dir" \
   --dir "$artifacts_dir" \
   --repo "$artifacts_remote" \
@@ -83,6 +90,7 @@ rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS
 test -f "$project_dir/AGENTS.md"
 test -f "$project_dir/.sdd-control/project.json"
 test -f "$project_dir/.planning/config.json"
+test -f "$project_dir/docs/superpowers/specs/sample.md"
 test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).project_id)' "$project_dir/.sdd-control/project.json")" = "compass-a2a"
 
 "$repo_root/scripts/sdd-control-plane.sh" artifacts checkpoint "$project_dir" \
@@ -95,6 +103,7 @@ test -f "$project_dir/.sdd-control/repo-snapshot.json"
 test -f "$artifacts_dir/projects/compass-a2a/sdd-control/REPO-SNAPSHOT.md"
 grep -q 'finished sample task' "$project_dir/.sdd-control/REPO-SNAPSHOT.md"
 grep -q '"dirty": false' "$project_dir/.sdd-control/repo-snapshot.json"
+grep -q '"local_name": "project"' "$project_dir/.sdd-control/repo-snapshot.json"
 
 bash -n "$repo_root/install.sh"
 bash -n "$repo_root/scripts/sdd-control-plane.sh"

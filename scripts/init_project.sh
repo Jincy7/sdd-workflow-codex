@@ -22,6 +22,7 @@ and hides these personal workflow artifacts from git status:
   AGENTS.md
   .sdd-control/
   .planning/
+  docs/superpowers/
 
 If .planning/config.json exists, personal mode sets commit_docs=false.
 EOF
@@ -76,6 +77,15 @@ copy_file() {
 append_personal_excludes() {
   local exclude_path
   local marker="# BEGIN sdd-control-plane personal workflow"
+  local end_marker="# END sdd-control-plane personal workflow"
+  local lines=(
+    "AGENTS.md"
+    ".sdd-control/"
+    ".planning/"
+    "docs/superpowers/"
+  )
+  local tmp
+  local line
 
   if ! git -C "$target_dir" rev-parse --git-dir >/dev/null 2>&1; then
     warn "$target_dir is not a git repository; cannot update .git/info/exclude"
@@ -90,18 +100,27 @@ append_personal_excludes() {
   mkdir -p "$(dirname "$exclude_path")"
   touch "$exclude_path"
 
-  if grep -Fq "$marker" "$exclude_path"; then
-    echo "kept personal excludes in $exclude_path"
-    return
-  fi
+  tmp="$(mktemp)"
+  awk -v marker="$marker" -v end_marker="$end_marker" '
+    $0 == marker { in_block = 1; next }
+    $0 == end_marker { in_block = 0; next }
+    in_block { next }
+    $0 == "AGENTS.md" { next }
+    $0 == ".sdd-control/" { next }
+    $0 == ".planning/" { next }
+    $0 == "docs/superpowers/" { next }
+    { print }
+  ' "$exclude_path" > "$tmp"
 
   {
+    cat "$tmp"
     printf '\n%s\n' "$marker"
-    printf 'AGENTS.md\n'
-    printf '.sdd-control/\n'
-    printf '.planning/\n'
-    printf '# END sdd-control-plane personal workflow\n'
-  } >> "$exclude_path"
+    for line in "${lines[@]}"; do
+      printf '%s\n' "$line"
+    done
+    printf '%s\n' "$end_marker"
+  } > "$exclude_path"
+  rm -f "$tmp"
 
   echo "wrote personal excludes to $exclude_path"
 }

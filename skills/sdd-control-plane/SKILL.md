@@ -21,7 +21,7 @@ Treat the current repository root as the context boundary.
 - Re-read this repo's `AGENTS.md` before assuming stack routing.
 - Let official GSD create and own its own project planning files.
 - Use this control plane only to choose which upstream skill should run next.
-- Treat project initialization as personal by default: keep `AGENTS.md`, `.sdd-control/`, and GSD `.planning/` in `.git/info/exclude` unless the team explicitly opts in.
+- Treat project initialization as personal by default: keep `AGENTS.md`, `.sdd-control/`, GSD `.planning/`, and Superpowers `docs/superpowers/` in `.git/info/exclude` unless the team explicitly opts in.
 
 ## Default Route
 
@@ -69,12 +69,15 @@ Use the control-plane artifact workflow when personal SDD/GSD state needs to mov
 
 - Stable identity is `.sdd-control/project.json.project_id`, not the repo folder name.
 - Aliases such as `compass` and `uhdc-compass` are metadata.
-- Sync target is the private artifacts repository, defaulting to `https://github.com/Jincy7/sdd-artifacts.git`.
-- Synced artifacts are `AGENTS.md`, `.sdd-control/`, and `.planning/`.
+- Sync target comes from `~/.sdd-control/config.json`, `SDD_ARTIFACTS_REPO`, or an explicit `--repo`.
+- Synced artifacts are `AGENTS.md`, `.sdd-control/`, `.planning/`, and Superpowers `docs/superpowers/`.
+- Treat `docs/superpowers/` specs as personal drafts by default. Promote only reviewed, team-relevant specs into the project's shared docs tree.
+- GitHub tokens are read from `gh auth token` at runtime when `--gh-user` or `SDD_ARTIFACTS_GH_USER` is set; tokens are never written to project artifacts.
 
 Commands:
 
 ```sh
+scripts/sdd-control-plane.sh artifacts configure --repo <artifacts-repo-url> --gh-user <github-user>
 scripts/sdd-control-plane.sh artifacts init . --project-id <stable-id> --alias <old-name> --alias <new-name>
 scripts/sdd-control-plane.sh artifacts push .
 scripts/sdd-control-plane.sh artifacts checkpoint . --note "<completed task>"

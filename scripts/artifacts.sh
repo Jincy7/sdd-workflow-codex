@@ -3,9 +3,10 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 home_dir="${HOME:?HOME is required}"
-default_artifacts_repo="https://github.com/Jincy7/sdd-artifacts.git"
-artifacts_repo="${SDD_ARTIFACTS_REPO:-$default_artifacts_repo}"
+artifacts_repo="${SDD_ARTIFACTS_REPO:-}"
 artifacts_dir="${SDD_ARTIFACTS_DIR:-$home_dir/.sdd-control/artifacts/sdd-artifacts}"
+artifacts_dir_explicit=0
+global_config="$home_dir/.sdd-control/config.json"
 
 usage() {
   cat <<'EOF'
@@ -15,6 +16,7 @@ usage:
   scripts/artifacts.sh pull [path] [options]
   scripts/artifacts.sh checkpoint [path] [options]
   scripts/artifacts.sh status [path] [options]
+  scripts/artifacts.sh configure [options]
 
 Options:
   --repo URL              artifacts repository URL
@@ -31,12 +33,14 @@ Environment:
   SDD_ARTIFACTS_REPO      default artifacts repo URL
   SDD_ARTIFACTS_DIR       default artifacts repo local clone/cache path
   SDD_ARTIFACTS_GH_USER   GitHub CLI account to use for artifact pushes
+  ~/.sdd-control/config.json can also provide artifacts_repo, artifacts_dir, and gh_user.
 
 Artifact layout:
   projects/<project-id>/manifest.json
   projects/<project-id>/AGENTS.md
   projects/<project-id>/sdd-control/
   projects/<project-id>/planning/
+  projects/<project-id>/superpowers/
   registry/projects.json
 EOF
 }
@@ -128,6 +132,7 @@ parse_common_args() {
         ;;
       --dir)
         artifacts_dir="${2:?missing value for --dir}"
+        artifacts_dir_explicit=1
         shift
         ;;
       --project-id)
@@ -171,6 +176,42 @@ parse_common_args() {
   done
 
   target_dir="$(cd "$target" && pwd)"
+  load_config_defaults
+  load_project_config_defaults
+}
+
+load_config_defaults() {
+  [ -f "$global_config" ] || return 0
+  need_cmd node
+  eval "$(
+    node - "$global_config" <<'NODE'
+const fs = require("fs");
+const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+function sh(name, value) {
+  if (value === undefined || value === null || value === "") return;
+  console.log(`${name}=${JSON.stringify(String(value))}`);
+}
+sh("CONFIG_ARTIFACTS_REPO", data.artifacts_repo);
+sh("CONFIG_ARTIFACTS_DIR", data.artifacts_dir);
+sh("CONFIG_GH_USER", data.gh_user);
+NODE
+  )"
+  [ "$artifacts_repo" != "" ] || artifacts_repo="${CONFIG_ARTIFACTS_REPO:-}"
+  [ "${SDD_ARTIFACTS_DIR:-}" != "" ] || [ "$artifacts_dir_explicit" -eq 1 ] || artifacts_dir="${CONFIG_ARTIFACTS_DIR:-$artifacts_dir}"
+  [ "$gh_user" != "" ] || gh_user="${CONFIG_GH_USER:-}"
+}
+
+load_project_config_defaults() {
+  local config="$target_dir/.sdd-control/project.json"
+  [ -f "$config" ] || return 0
+  need_cmd node
+  local repo
+  repo="$(node -e 'const fs=require("fs"); const p=process.argv[1]; const d=JSON.parse(fs.readFileSync(p,"utf8")); process.stdout.write(d.artifacts_repo || "")' "$config")"
+  [ "$artifacts_repo" != "" ] || artifacts_repo="$repo"
+}
+
+require_artifacts_repo() {
+  [ "$artifacts_repo" != "" ] || die "artifacts repo is not configured; pass --repo URL, set SDD_ARTIFACTS_REPO, or run artifacts configure --repo URL"
 }
 
 git_remote_url() {
@@ -221,6 +262,7 @@ ensure_local_project_config() {
   local remote
 
   mkdir -p "$target_dir/.sdd-control"
+  require_artifacts_repo
   aliases_json="$(default_aliases_json)"
   remote="$(git_remote_url)"
 
@@ -236,9 +278,9 @@ ensure_local_project_config() {
   project_id="$(sanitize_project_id "$project_id")"
   display="${display_name:-$(basename "$target_dir")}"
 
-  node - "$config" "$project_id" "$display" "$aliases_json" "$artifacts_repo" "$remote" <<'NODE'
+  node - "$config" "$project_id" "$display" "$aliases_json" "$remote" <<'NODE'
 const fs = require("fs");
-const [path, projectId, displayName, aliasesJson, artifactsRepo, remoteUrl] = process.argv.slice(2);
+const [path, projectId, displayName, aliasesJson, remoteUrl] = process.argv.slice(2);
 let data = {};
 if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, "utf8"));
 const aliases = JSON.parse(aliasesJson);
@@ -246,7 +288,7 @@ data.schema_version = 1;
 data.project_id = projectId;
 data.display_name = data.display_name || displayName;
 data.aliases = [...new Set([...(data.aliases || []), ...aliases])];
-data.artifacts_repo = artifactsRepo;
+delete data.artifacts_repo;
 data.updated_at = new Date().toISOString();
 data.repo_remotes = [...new Set([...(data.repo_remotes || []), remoteUrl].filter(Boolean))];
 fs.writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
@@ -265,6 +307,7 @@ load_project_id() {
 
 ensure_artifacts_repo() {
   need_cmd git
+  require_artifacts_repo
 
   if [ -d "$artifacts_dir/.git" ]; then
     log "Updating artifacts repo at $artifacts_dir"
@@ -324,6 +367,7 @@ write_manifest_and_registry() {
 
   node - "$config" "$project_dir/manifest.json" "$artifacts_dir/registry/projects.json" "$now" "$target_dir" "$remote" "$head" <<'NODE'
 const fs = require("fs");
+const path = require("path");
 const [configPath, manifestPath, registryPath, now, sourcePath, remoteUrl, gitHead] = process.argv.slice(2);
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const manifest = {
@@ -331,10 +375,9 @@ const manifest = {
   project_id: config.project_id,
   display_name: config.display_name,
   aliases: config.aliases || [],
-  artifacts_repo: config.artifacts_repo,
   updated_at: now,
   source: {
-    path: sourcePath,
+    local_name: path.basename(sourcePath),
     git_remote: remoteUrl || null,
     git_head: gitHead || null,
   },
@@ -413,7 +456,7 @@ const snapshot = {
   updated_at: now,
   note: note || null,
   repo: {
-    path: targetDir,
+    local_name: path.basename(targetDir),
     branch: branch || null,
     head: head || null,
     remote: remote || null,
@@ -515,6 +558,10 @@ copy_up() {
     mkdir -p "$project_dir/planning"
     rsync -a --delete "$target_dir/.planning/" "$project_dir/planning/"
   fi
+  if [ -d "$target_dir/docs/superpowers" ]; then
+    mkdir -p "$project_dir/superpowers"
+    rsync -a --delete "$target_dir/docs/superpowers/" "$project_dir/superpowers/"
+  fi
 
   write_manifest_and_registry "$id"
 }
@@ -537,8 +584,62 @@ copy_down() {
     mkdir -p "$target_dir/.planning"
     rsync -a --delete "$project_dir/planning/" "$target_dir/.planning/"
   fi
+  if [ -d "$project_dir/superpowers" ]; then
+    mkdir -p "$target_dir/docs/superpowers"
+    rsync -a --delete "$project_dir/superpowers/" "$target_dir/docs/superpowers/"
+  fi
 
   "$repo_root/scripts/init_project.sh" "$target_dir" >/dev/null
+}
+
+cmd_configure() {
+  target="."
+  project_id=""
+  display_name=""
+  sync_note=""
+  gh_user="${SDD_ARTIFACTS_GH_USER:-}"
+  aliases=()
+  no_push=0
+  force=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --repo)
+        artifacts_repo="${2:?missing value for --repo}"
+        shift
+        ;;
+      --dir)
+        artifacts_dir="${2:?missing value for --dir}"
+        artifacts_dir_explicit=1
+        shift
+        ;;
+      --gh-user)
+        gh_user="${2:?missing value for --gh-user}"
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "unknown configure option: $1"
+        ;;
+    esac
+    shift
+  done
+  [ "$artifacts_repo" != "" ] || die "configure requires --repo URL"
+  mkdir -p "$(dirname "$global_config")"
+  node - "$global_config" "$artifacts_repo" "$artifacts_dir" "$gh_user" <<'NODE'
+const fs = require("fs");
+const [path, repo, dir, ghUser] = process.argv.slice(2);
+let data = {};
+if (fs.existsSync(path)) data = JSON.parse(fs.readFileSync(path, "utf8"));
+data.schema_version = 1;
+data.artifacts_repo = repo;
+data.artifacts_dir = dir;
+if (ghUser) data.gh_user = ghUser;
+fs.writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`);
+NODE
+  log "Wrote artifact sync config to $global_config"
 }
 
 cmd_init() {
@@ -614,6 +715,7 @@ cmd="${1:-status}"
 shift || true
 
 case "$cmd" in
+  configure) cmd_configure "$@" ;;
   init) cmd_init "$@" ;;
   push|sync) cmd_push "$@" ;;
   checkpoint|refresh) cmd_checkpoint "$@" ;;

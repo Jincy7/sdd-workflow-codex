@@ -20,6 +20,7 @@ Recommended local excludes:
 - `AGENTS.md`
 - `.sdd-control/`
 - `.planning/`
+- `docs/superpowers/`
 
 Recommended GSD personal setting:
 
@@ -28,6 +29,12 @@ Recommended GSD personal setting:
 ## Artifact Sync
 
 Use a stable project id that survives repo renames and local folder differences.
+
+Configure the personal artifacts repository once per machine:
+
+```sh
+scripts/sdd-control-plane.sh artifacts configure --repo <artifacts-repo-url> --gh-user <github-user>
+```
 
 Example:
 
@@ -40,6 +47,9 @@ Synced files:
 - `AGENTS.md`
 - `.sdd-control/`
 - `.planning/`
+- `docs/superpowers/`
+
+Keep Superpowers specs personal by default. When a spec becomes shared product or architecture truth, move or copy the reviewed version into the team's normal docs path and commit that promoted document.
 
 Post-work sync:
 

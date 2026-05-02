@@ -67,6 +67,7 @@ By default, project initialization is **personal**. It updates the target repo's
 AGENTS.md
 .sdd-control/
 .planning/
+docs/superpowers/
 ```
 
 If official GSD has already created `.planning/config.json`, personal mode also sets:
@@ -92,6 +93,16 @@ For a team-visible workflow that should be committed to the repo:
 
 Use the private artifacts repo to sync workflow state by stable project id, not repository name:
 
+First configure your personal artifacts repository on this machine:
+
+```sh
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts configure \
+  --repo https://github.com/<owner>/<repo>.git \
+  --gh-user <github-user>
+```
+
+This writes `~/.sdd-control/config.json`. The artifacts repo URL and GitHub account stay in that local personal config. The GitHub token is read from `gh auth token` at runtime; it is not written to this repo or to the artifacts repo.
+
 ```sh
 /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts init . \
   --project-id compass-a2a \
@@ -114,19 +125,16 @@ projects/compass-a2a/
   AGENTS.md
   sdd-control/
   planning/
+  superpowers/
 registry/projects.json
 ```
 
-Default artifacts repo:
-
-```text
-https://github.com/Jincy7/sdd-artifacts.git
-```
+`superpowers/` mirrors local `docs/superpowers/`. Treat those files as personal design drafts by default; promote a reviewed spec into the team's normal docs path only when it should become shared project truth.
 
 Common commands:
 
 ```sh
-# Push local AGENTS.md, .sdd-control/, and .planning/ to the artifacts repo
+# Push local AGENTS.md, .sdd-control/, .planning/, and docs/superpowers/ to the artifacts repo
 /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts push .
 
 # Restore on another machine or after a repo rename
@@ -139,7 +147,7 @@ Common commands:
 # If your git credential helper picks the wrong GitHub account
 /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts checkpoint . \
   --note "finished PR-10 reducer stabilization" \
-  --gh-user Jincy7
+  --gh-user <github-user>
 
 # Use a different local clone/cache path
 SDD_ARTIFACTS_DIR=~/.cache/sdd-artifacts \

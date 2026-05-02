@@ -14,7 +14,7 @@ This repository uses the real installed upstream stacks:
 
 Keep all project state scoped to this repository. Do not import state from another repo unless explicitly requested.
 
-By default this control-plane setup is personal. Keep `AGENTS.md`, `.sdd-control/`, and GSD `.planning/` out of shared git history unless the team explicitly opts in.
+By default this control-plane setup is personal. Keep `AGENTS.md`, `.sdd-control/`, GSD `.planning/`, and Superpowers `docs/superpowers/` out of shared git history unless the team explicitly opts in.
 
 For cross-machine sync, bind the project to a stable id in `.sdd-control/project.json` and sync to the private artifacts repository. Folder names and repo names are aliases, not identity.
 
