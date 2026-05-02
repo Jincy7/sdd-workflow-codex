@@ -57,9 +57,46 @@ backup_path() {
 move_aside() {
   local path="$1"
   [ -e "$path" ] || [ -L "$path" ] || return 0
-  local backup="${path}.backup.$(date +%Y%m%d%H%M%S)"
+  local base
+  local backup
+  base="$(basename "$path")"
+  case "$path" in
+    "$codex_home/skills/"*)
+      mkdir -p "$codex_home/skill-backups"
+      backup="$codex_home/skill-backups/${base}.backup.$(date +%Y%m%d%H%M%S)"
+      ;;
+    "$agents_home/skills/"*)
+      mkdir -p "$agents_home/skill-backups"
+      backup="$agents_home/skill-backups/${base}.backup.$(date +%Y%m%d%H%M%S)"
+      ;;
+    *)
+      backup="${path}.backup.$(date +%Y%m%d%H%M%S)"
+      ;;
+  esac
   mv "$path" "$backup"
   log "Moved existing $path to $backup"
+}
+
+quarantine_discovery_backups() {
+  local skills_dir
+  local backup_dir
+  local item
+  local base
+
+  for skills_dir in "$codex_home/skills" "$agents_home/skills"; do
+    [ -d "$skills_dir" ] || continue
+    case "$skills_dir" in
+      "$codex_home/skills") backup_dir="$codex_home/skill-backups" ;;
+      "$agents_home/skills") backup_dir="$agents_home/skill-backups" ;;
+      *) continue ;;
+    esac
+    mkdir -p "$backup_dir"
+    while IFS= read -r item; do
+      base="$(basename "$item")"
+      mv "$item" "$backup_dir/$base"
+      log "Moved discovery backup $item to $backup_dir/$base"
+    done < <(find "$skills_dir" -maxdepth 1 \( -type d -o -type l \) -name '*.backup.*' -print 2>/dev/null)
+  done
 }
 
 clone_or_update() {
@@ -141,6 +178,7 @@ install_control_plane() {
   log "==> Installing SDD control plane skill"
   [ -f "$control_skill_source/SKILL.md" ] || die "missing $control_skill_source/SKILL.md"
   mkdir -p "$codex_home/skills"
+  quarantine_discovery_backups
 
   local legacy="$codex_home/skills/sdd-workflow"
   if [ -e "$legacy" ] || [ -L "$legacy" ]; then

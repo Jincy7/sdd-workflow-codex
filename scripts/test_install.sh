@@ -9,12 +9,16 @@ export HOME="$tmp_dir/home"
 export SDD_CP_MOCK=1
 project_dir="$tmp_dir/project"
 mkdir -p "$project_dir"
+mkdir -p "$HOME/.codex/skills/old-skill.backup.20000101000000"
+printf '%s\n' '---' 'name: old-skill' 'description: invalid: unquoted' '---' > "$HOME/.codex/skills/old-skill.backup.20000101000000/SKILL.md"
 
 "$repo_root/install.sh" >/tmp/sdd-control-plane-install.log
 test -f "$HOME/.codex/skills/sdd-control-plane/SKILL.md"
 test -f "$HOME/.codex/get-shit-done/VERSION"
 test -L "$HOME/.agents/skills/superpowers"
 test -f "$HOME/.codex/skills/gstack-review/SKILL.md"
+test ! -e "$HOME/.codex/skills/old-skill.backup.20000101000000"
+test -f "$HOME/.codex/skill-backups/old-skill.backup.20000101000000/SKILL.md"
 
 awk '
   /^---[[:space:]]*$/ { section += 1; next }
