@@ -9,6 +9,9 @@ export HOME="$tmp_dir/home"
 export SDD_CP_MOCK=1
 project_dir="$tmp_dir/project"
 mkdir -p "$project_dir"
+git -C "$project_dir" init -q
+mkdir -p "$project_dir/.planning"
+printf '%s\n' '{"commit_docs":true}' > "$project_dir/.planning/config.json"
 mkdir -p "$HOME/.codex/skills/old-skill.backup.20000101000000"
 printf '%s\n' '---' 'name: old-skill' 'description: invalid: unquoted' '---' > "$HOME/.codex/skills/old-skill.backup.20000101000000/SKILL.md"
 
@@ -39,6 +42,20 @@ grep -q 'ok   Control plane' /tmp/sdd-control-plane-status.log
 test -f "$project_dir/AGENTS.md"
 test -f "$project_dir/.sdd-control/STACKS.md"
 test -f "$project_dir/.sdd-control/PROJECT.md"
+grep -q 'BEGIN sdd-control-plane personal workflow' "$project_dir/.git/info/exclude"
+grep -q '^AGENTS.md$' "$project_dir/.git/info/exclude"
+grep -q '^.sdd-control/$' "$project_dir/.git/info/exclude"
+grep -q '^.planning/$' "$project_dir/.git/info/exclude"
+test "$(git -C "$project_dir" status --short -- AGENTS.md .sdd-control .planning)" = ""
+test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).commit_docs)' "$project_dir/.planning/config.json")" = "false"
+
+team_dir="$tmp_dir/team-project"
+mkdir -p "$team_dir"
+git -C "$team_dir" init -q
+"$repo_root/scripts/init_project.sh" --team "$team_dir" >/tmp/sdd-control-plane-team-init.log
+test -f "$team_dir/AGENTS.md"
+! grep -q 'BEGIN sdd-control-plane personal workflow' "$team_dir/.git/info/exclude"
+test -n "$(git -C "$team_dir" status --short -- AGENTS.md .sdd-control)"
 
 bash -n "$repo_root/install.sh"
 bash -n "$repo_root/scripts/sdd-control-plane.sh"

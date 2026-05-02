@@ -13,7 +13,8 @@ This repository uses the real installed upstream stacks:
 
 Keep all project state scoped to this repository. Do not import state from another repo unless explicitly requested.
 
+By default this control-plane setup is personal. Keep `AGENTS.md`, `.sdd-control/`, and GSD `.planning/` out of shared git history unless the team explicitly opts in.
+
 ## Recommended Route
 
 Fuzzy idea -> `$gstack-office-hours` -> `$gstack-plan-ceo-review` -> `$gsd-spec-phase` -> `$gstack-plan-eng-review` -> Superpowers `test-driven-development` -> `$gsd-execute-phase` -> `$gstack-review` -> `$gstack-qa` -> `$gsd-verify-work` -> `$gstack-ship`.
-

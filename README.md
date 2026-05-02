@@ -44,9 +44,9 @@ By default, gstack runs with `GSTACK_SKIP_COREUTILS=1` to avoid Homebrew side ef
 scripts/sdd-control-plane.sh status
 ```
 
-## Initialize A Project
+## Initialize A Project As A Personal Workflow
 
-Inside any repository:
+Inside any repository you personally work in:
 
 ```sh
 /path/to/sdd-workflow-codex/scripts/init_project.sh .
@@ -61,11 +61,31 @@ AGENTS.md
   STACKS.md
 ```
 
+By default, project initialization is **personal**. It updates the target repo's local `.git/info/exclude`, not the shared `.gitignore`, so these workflow artifacts stay off team branches:
+
+```text
+AGENTS.md
+.sdd-control/
+.planning/
+```
+
+If official GSD has already created `.planning/config.json`, personal mode also sets:
+
+```json
+"commit_docs": false
+```
+
 Then in Codex, use:
 
 ```text
 $sdd-control-plane
 $gsd-new-project
+```
+
+For a team-visible workflow that should be committed to the repo:
+
+```sh
+/path/to/sdd-workflow-codex/scripts/init_project.sh --team .
 ```
 
 ## Control Plane Route
@@ -108,4 +128,3 @@ Full real upstream test including gstack's heavy Bun build and Playwright browse
 - GSD currently declares Node.js `>=22`. The installer may still complete on older Node versions, but Node 22+ is recommended.
 - gstack requires Bun and downloads Playwright Chromium during setup.
 - Restart Codex after installing new skills so discovery refreshes.
-

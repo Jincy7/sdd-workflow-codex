@@ -2,11 +2,14 @@
 
 Use the official installed SDD stack through the `sdd-control-plane` skill.
 
+This file is intended to be a personal Codex overlay unless the team explicitly commits it.
+
 ## Context Isolation
 
 - Treat this repository as the context boundary.
 - Do not reuse GSD plans, gstack learnings, Superpowers plan files, or project notes from another repository unless the user explicitly provides them.
 - When switching projects, re-read this file before choosing workflow state.
+- Keep `.planning/` and `.sdd-control/` local unless the team has agreed to share this workflow.
 
 ## Stack Routing
 
@@ -23,4 +26,3 @@ Use the official installed SDD stack through the `sdd-control-plane` skill.
 4. Use `$gsd-spec-phase` or `$gsd-plan-phase` for durable planning.
 5. Use Superpowers `test-driven-development` and `executing-plans` during implementation.
 6. Use `$gstack-review`, `$gstack-qa`, `$gsd-verify-work`, and Superpowers `verification-before-completion` before completion.
-

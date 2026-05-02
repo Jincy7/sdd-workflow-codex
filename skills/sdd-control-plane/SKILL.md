@@ -21,6 +21,7 @@ Treat the current repository root as the context boundary.
 - Re-read this repo's `AGENTS.md` before assuming stack routing.
 - Let official GSD create and own its own project planning files.
 - Use this control plane only to choose which upstream skill should run next.
+- Treat project initialization as personal by default: keep `AGENTS.md`, `.sdd-control/`, and GSD `.planning/` in `.git/info/exclude` unless the team explicitly opts in.
 
 ## Default Route
 
