@@ -16,6 +16,15 @@ test -f "$HOME/.codex/get-shit-done/VERSION"
 test -L "$HOME/.agents/skills/superpowers"
 test -f "$HOME/.codex/skills/gstack-review/SKILL.md"
 
+awk '
+  /^---[[:space:]]*$/ { section += 1; next }
+  section == 1 && /^[[:space:]]*[A-Za-z0-9_-]+:[[:space:]]+[^"'\''|>].*:[[:space:]]/ {
+    print FILENAME ":" FNR ": quote YAML values that contain colon-space"
+    bad = 1
+  }
+  END { exit bad }
+' "$repo_root/skills/sdd-control-plane/SKILL.md"
+
 "$repo_root/scripts/sdd-control-plane.sh" status >/tmp/sdd-control-plane-status.log
 grep -q 'ok   GSD' /tmp/sdd-control-plane-status.log
 grep -q 'ok   Superpowers' /tmp/sdd-control-plane-status.log
@@ -33,4 +42,3 @@ bash -n "$repo_root/scripts/init_project.sh"
 bash -n "$repo_root/scripts/test_install.sh"
 
 echo "All mock control-plane tests passed"
-

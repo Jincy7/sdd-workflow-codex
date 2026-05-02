@@ -1,6 +1,6 @@
 ---
 name: sdd-control-plane
-description: Use this skill to orchestrate the real installed SDD stack in Codex: official GSD for planning/context, official Superpowers for engineering discipline, and official gstack for role-based review, QA, and release gates.
+description: "Use this skill to orchestrate the real installed SDD stack in Codex: official GSD for planning/context, official Superpowers for engineering discipline, and official gstack for role-based review, QA, and release gates."
 ---
 
 # SDD Control Plane
@@ -70,4 +70,3 @@ Do not call work complete until:
 - Tests/build/lint/manual checks requested by the upstream plan have run.
 - Review/QA findings are either fixed or explicitly recorded.
 - Remaining risks are stated plainly.
-
