@@ -77,9 +77,19 @@ Commands:
 ```sh
 scripts/sdd-control-plane.sh artifacts init . --project-id <stable-id> --alias <old-name> --alias <new-name>
 scripts/sdd-control-plane.sh artifacts push .
+scripts/sdd-control-plane.sh artifacts checkpoint . --note "<completed task>"
 scripts/sdd-control-plane.sh artifacts pull . --project-id <stable-id>
 scripts/sdd-control-plane.sh artifacts status .
 ```
+
+After meaningful code changes, use this sync route:
+
+1. Use `$gsd-progress` or `$gsd-verify-work` to update phase/progress state.
+2. If the repo structure, architecture, stack, integrations, conventions, or testing shape changed, use `$gsd-map-codebase`.
+3. If reusable lessons emerged, use `$gsd-extract-learnings`.
+4. Run `scripts/sdd-control-plane.sh artifacts checkpoint . --note "<task>"`.
+
+The checkpoint command captures current branch, HEAD, dirty files, and codebase-map staleness. It does not rewrite GSD semantic docs; official GSD owns that update.
 
 ## Minimum Completion Gate
 

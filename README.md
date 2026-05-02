@@ -132,12 +132,32 @@ Common commands:
 # Restore on another machine or after a repo rename
 /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts pull . --project-id compass-a2a
 
+# After a specific task, capture current repo shape and sync artifacts
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts checkpoint . \
+  --note "finished PR-10 reducer stabilization"
+
+# If your git credential helper picks the wrong GitHub account
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts checkpoint . \
+  --note "finished PR-10 reducer stabilization" \
+  --gh-user Jincy7
+
 # Use a different local clone/cache path
 SDD_ARTIFACTS_DIR=~/.cache/sdd-artifacts \
   /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts status .
 ```
 
 Aliases such as `compass` and `uhdc-compass` are metadata only. The stable `project_id` is the identity.
+
+For semantic repo-shape sync after meaningful code changes, use this post-work route:
+
+```text
+$gsd-progress or $gsd-verify-work
+-> if architecture/code layout changed: $gsd-map-codebase
+-> if lessons changed: $gsd-extract-learnings
+-> scripts/sdd-control-plane.sh artifacts checkpoint . --note "<task>"
+```
+
+`checkpoint` records the current git branch, HEAD, dirty status, and whether `.planning/codebase/` appears stale against HEAD. It does not rewrite GSD's semantic docs by itself; official GSD owns that.
 
 ## Control Plane Route
 

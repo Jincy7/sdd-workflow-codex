@@ -85,6 +85,17 @@ test -f "$project_dir/.sdd-control/project.json"
 test -f "$project_dir/.planning/config.json"
 test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).project_id)' "$project_dir/.sdd-control/project.json")" = "compass-a2a"
 
+"$repo_root/scripts/sdd-control-plane.sh" artifacts checkpoint "$project_dir" \
+  --dir "$artifacts_dir" \
+  --repo "$artifacts_remote" \
+  --note "finished sample task" \
+  --no-push >/tmp/sdd-control-plane-artifacts-checkpoint.log
+test -f "$project_dir/.sdd-control/REPO-SNAPSHOT.md"
+test -f "$project_dir/.sdd-control/repo-snapshot.json"
+test -f "$artifacts_dir/projects/compass-a2a/sdd-control/REPO-SNAPSHOT.md"
+grep -q 'finished sample task' "$project_dir/.sdd-control/REPO-SNAPSHOT.md"
+grep -q '"dirty": false' "$project_dir/.sdd-control/repo-snapshot.json"
+
 bash -n "$repo_root/install.sh"
 bash -n "$repo_root/scripts/sdd-control-plane.sh"
 bash -n "$repo_root/scripts/init_project.sh"

@@ -13,6 +13,7 @@ usage:
   scripts/artifacts.sh init [path] [options]
   scripts/artifacts.sh push [path] [options]
   scripts/artifacts.sh pull [path] [options]
+  scripts/artifacts.sh checkpoint [path] [options]
   scripts/artifacts.sh status [path] [options]
 
 Options:
@@ -21,12 +22,15 @@ Options:
   --project-id ID         stable project id; repo-name agnostic
   --display-name NAME     human-readable project name
   --alias NAME            add an alias such as compass or uhdc-compass
+  --note TEXT             checkpoint note, such as the completed task name
+  --gh-user USER          use a GitHub CLI token for this user when pushing
   --no-push               commit locally but do not push artifacts repo
   --force                 allow rebinding a local project to a different project id
 
 Environment:
   SDD_ARTIFACTS_REPO      default artifacts repo URL
   SDD_ARTIFACTS_DIR       default artifacts repo local clone/cache path
+  SDD_ARTIFACTS_GH_USER   GitHub CLI account to use for artifact pushes
 
 Artifact layout:
   projects/<project-id>/manifest.json
@@ -52,6 +56,34 @@ die() {
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+github_auth_header() {
+  [ "$gh_user" != "" ] || return 1
+  need_cmd gh
+  local token
+  token="$(gh auth token -h github.com -u "$gh_user")"
+  printf 'AUTHORIZATION: basic %s\n' "$(printf 'x-access-token:%s' "$token" | base64 | tr -d '\n')"
+}
+
+git_clone() {
+  local url="$1"
+  local dir="$2"
+  local header
+  if header="$(github_auth_header 2>/dev/null)"; then
+    git -c credential.helper= -c "http.https://github.com/.extraheader=$header" clone --quiet "$url" "$dir"
+  else
+    git clone --quiet "$url" "$dir"
+  fi
+}
+
+git_artifacts() {
+  local header
+  if header="$(github_auth_header 2>/dev/null)"; then
+    git -C "$artifacts_dir" -c credential.helper= -c "http.https://github.com/.extraheader=$header" "$@"
+  else
+    git -C "$artifacts_dir" "$@"
+  fi
 }
 
 json_escape() {
@@ -82,6 +114,8 @@ parse_common_args() {
   target="."
   project_id=""
   display_name=""
+  sync_note=""
+  gh_user="${SDD_ARTIFACTS_GH_USER:-}"
   aliases=()
   no_push=0
   force=0
@@ -106,6 +140,14 @@ parse_common_args() {
         ;;
       --alias)
         aliases+=("${2:?missing value for --alias}")
+        shift
+        ;;
+      --note)
+        sync_note="${2:?missing value for --note}"
+        shift
+        ;;
+      --gh-user)
+        gh_user="${2:?missing value for --gh-user}"
         shift
         ;;
       --no-push)
@@ -137,6 +179,10 @@ git_remote_url() {
 
 git_head() {
   git -C "$target_dir" rev-parse HEAD 2>/dev/null || true
+}
+
+git_branch() {
+  git -C "$target_dir" branch --show-current 2>/dev/null || true
 }
 
 default_aliases_json() {
@@ -224,13 +270,13 @@ ensure_artifacts_repo() {
     log "Updating artifacts repo at $artifacts_dir"
     if git -C "$artifacts_dir" rev-parse --verify HEAD >/dev/null 2>&1 &&
       git -C "$artifacts_dir" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
-      git -C "$artifacts_dir" pull --ff-only || warn "could not fast-forward artifacts repo; continuing with local state"
+      git_artifacts pull --ff-only || warn "could not fast-forward artifacts repo; continuing with local state"
     else
       log "Artifacts repo has no upstream branch yet; skipping pull"
     fi
   else
     mkdir -p "$(dirname "$artifacts_dir")"
-    if git clone --quiet "$artifacts_repo" "$artifacts_dir"; then
+    if git_clone "$artifacts_repo" "$artifacts_dir"; then
       :
     else
       warn "could not clone $artifacts_repo; initializing local artifacts repo at $artifacts_dir"
@@ -314,6 +360,124 @@ fs.writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
 NODE
 }
 
+write_repo_snapshot() {
+  local snapshot_json="$target_dir/.sdd-control/repo-snapshot.json"
+  local snapshot_md="$target_dir/.sdd-control/REPO-SNAPSHOT.md"
+  local status_file
+  local head
+  local branch
+  local remote
+  local now
+
+  mkdir -p "$target_dir/.sdd-control"
+  status_file="$(mktemp)"
+  git -C "$target_dir" status --short > "$status_file" 2>/dev/null || true
+  head="$(git_head)"
+  branch="$(git_branch)"
+  remote="$(git_remote_url)"
+  now="$(utc_now)"
+
+  node - "$target_dir" "$snapshot_json" "$snapshot_md" "$status_file" "$now" "$head" "$branch" "$remote" "$sync_note" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+const [targetDir, snapshotJson, snapshotMd, statusFile, now, head, branch, remote, note] = process.argv.slice(2);
+
+const statusLines = fs.existsSync(statusFile)
+  ? fs.readFileSync(statusFile, "utf8").split(/\r?\n/).filter(Boolean)
+  : [];
+
+const codebaseDir = path.join(targetDir, ".planning", "codebase");
+const mappedCommits = new Set();
+if (fs.existsSync(codebaseDir)) {
+  const stack = [codebaseDir];
+  while (stack.length) {
+    const dir = stack.pop();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        const text = fs.readFileSync(full, "utf8");
+        for (const match of text.matchAll(/Mapped Commit:\*\*\s*`?([0-9a-f]{7,40})`?/gi)) {
+          mappedCommits.add(match[1]);
+        }
+      }
+    }
+  }
+}
+
+const mapped = [...mappedCommits].sort();
+const stale = Boolean(head && mapped.length && !mapped.some((commit) => head.startsWith(commit) || commit.startsWith(head)));
+const snapshot = {
+  schema_version: 1,
+  updated_at: now,
+  note: note || null,
+  repo: {
+    path: targetDir,
+    branch: branch || null,
+    head: head || null,
+    remote: remote || null,
+    dirty: statusLines.length > 0,
+    status: statusLines,
+  },
+  planning: {
+    exists: fs.existsSync(path.join(targetDir, ".planning")),
+    codebase_map: {
+      exists: fs.existsSync(codebaseDir),
+      mapped_commits: mapped,
+      stale_against_head: stale,
+    },
+  },
+};
+
+fs.writeFileSync(snapshotJson, `${JSON.stringify(snapshot, null, 2)}\n`);
+
+const statusPreview = statusLines.length
+  ? statusLines.map((line) => `- \`${line.replace(/`/g, "\\`")}\``).join("\n")
+  : "- Clean";
+const mappedText = mapped.length ? mapped.map((commit) => `- \`${commit}\``).join("\n") : "- None found";
+const guidance = stale
+  ? "- Codebase map appears stale against current HEAD. In Codex, run `$gsd-map-codebase`, then run `artifacts checkpoint` again."
+  : "- Codebase map is either current against HEAD or no mapped commit was found.";
+
+fs.writeFileSync(snapshotMd, `# Repo Snapshot
+
+Updated: ${now}
+
+${note ? `Note: ${note}\n\n` : ""}## Git
+
+- Branch: ${branch || "unknown"}
+- HEAD: ${head || "unknown"}
+- Remote: ${remote || "none"}
+- Dirty: ${statusLines.length ? "yes" : "no"}
+
+## Git Status
+
+${statusPreview}
+
+## GSD Codebase Map
+
+- Exists: ${fs.existsSync(codebaseDir) ? "yes" : "no"}
+- Stale against HEAD: ${stale ? "yes" : "no"}
+
+Mapped commits:
+
+${mappedText}
+
+## Sync Guidance
+
+${guidance}
+- For phase/progress state, run the relevant GSD workflow such as \`$gsd-progress\`, \`$gsd-verify-work\`, or \`$gsd-extract-learnings\` before checkpointing.
+`);
+NODE
+
+  rm -f "$status_file"
+
+  if grep -q '"stale_against_head": true' "$snapshot_json"; then
+    warn "GSD codebase map appears stale against current HEAD. Run \$gsd-map-codebase, then checkpoint again for semantic repo-shape sync."
+  fi
+}
+
 commit_artifacts() {
   local id="$1"
   local message="${2:-sync SDD artifacts for $id}"
@@ -327,6 +491,8 @@ commit_artifacts() {
 
   if [ "$no_push" -eq 1 ]; then
     log "Skipped artifacts push (--no-push)"
+  elif [ "$gh_user" != "" ]; then
+    git_artifacts push -u origin HEAD:main
   else
     git -C "$artifacts_dir" push -u origin HEAD:main
   fi
@@ -402,6 +568,20 @@ cmd_push() {
   commit_artifacts "$id" "sync SDD artifacts for $id"
 }
 
+cmd_checkpoint() {
+  parse_common_args "$@"
+  need_cmd node
+  need_cmd rsync
+  ensure_control_context
+  ensure_local_project_config
+  ensure_artifacts_repo
+  local id
+  id="$(load_project_id)"
+  write_repo_snapshot
+  copy_up "$id"
+  commit_artifacts "$id" "checkpoint SDD artifacts for $id"
+}
+
 cmd_pull() {
   parse_common_args "$@"
   need_cmd node
@@ -436,6 +616,7 @@ shift || true
 case "$cmd" in
   init) cmd_init "$@" ;;
   push|sync) cmd_push "$@" ;;
+  checkpoint|refresh) cmd_checkpoint "$@" ;;
   pull) cmd_pull "$@" ;;
   status) cmd_status "$@" ;;
   -h|--help|help) usage ;;

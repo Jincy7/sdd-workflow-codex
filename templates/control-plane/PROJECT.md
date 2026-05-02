@@ -41,6 +41,14 @@ Synced files:
 - `.sdd-control/`
 - `.planning/`
 
+Post-work sync:
+
+```sh
+scripts/sdd-control-plane.sh artifacts checkpoint . --note "completed task"
+```
+
+Run `$gsd-map-codebase` before checkpointing when the repository structure, architecture, stack, integrations, conventions, or testing shape changed.
+
 ## Verification Commands
 
 - Control plane status: `scripts/sdd-control-plane.sh status` from the control plane repo.
