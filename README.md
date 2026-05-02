@@ -131,6 +131,14 @@ registry/projects.json
 
 `superpowers/` mirrors local `docs/superpowers/`. Treat those files as personal design drafts by default; promote a reviewed spec into the team's normal docs path only when it should become shared project truth.
 
+At the start of work on a machine or checkout that may be stale:
+
+```sh
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts pull .
+```
+
+`pull` uses local `.sdd-control/project.json` when present. If this repo has not been bound locally yet, it resolves the project from artifact registry aliases and the current git remote. Pass `--project-id` when there is more than one match. Superpowers itself reads and writes the local `docs/superpowers/` directory; the control plane is what hydrates and syncs that directory.
+
 Common commands:
 
 ```sh

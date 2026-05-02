@@ -82,6 +82,16 @@ grep -q '"local_name": "project"' "$artifacts_dir/projects/compass-a2a/manifest.
 ! grep -q 'artifacts_repo' "$project_dir/.sdd-control/project.json"
 ! grep -q 'artifacts_repo' "$artifacts_dir/projects/compass-a2a/manifest.json"
 
+renamed_dir="$tmp_dir/uhdc-compass"
+mkdir -p "$renamed_dir"
+git -C "$renamed_dir" init -q
+"$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$renamed_dir" \
+  --dir "$artifacts_dir" \
+  --repo "$artifacts_remote" >/tmp/sdd-control-plane-artifacts-pull-resolved.log 2>&1
+grep -q 'Resolved artifact project_id=compass-a2a' /tmp/sdd-control-plane-artifacts-pull-resolved.log
+test -f "$renamed_dir/docs/superpowers/specs/sample.md"
+test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).project_id)' "$renamed_dir/.sdd-control/project.json")" = "compass-a2a"
+
 rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS.md" "$project_dir/docs/superpowers"
 "$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$project_dir" \
   --dir "$artifacts_dir" \

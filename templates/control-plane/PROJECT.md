@@ -51,6 +51,14 @@ Synced files:
 
 Keep Superpowers specs personal by default. When a spec becomes shared product or architecture truth, move or copy the reviewed version into the team's normal docs path and commit that promoted document.
 
+Start-of-work sync:
+
+```sh
+scripts/sdd-control-plane.sh artifacts pull .
+```
+
+This restores local `docs/superpowers/` before Superpowers reads or writes plan/spec files. If this repo has not been bound locally yet, the control plane resolves it from artifact registry aliases and the current git remote; pass `--project-id` when ambiguous.
+
 Post-work sync:
 
 ```sh

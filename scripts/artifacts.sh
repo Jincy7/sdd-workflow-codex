@@ -248,6 +248,98 @@ process.stdout.write(JSON.stringify([...new Set(values)]));
 NODE
 }
 
+resolve_project_id_from_artifacts() {
+  local registry="$artifacts_dir/registry/projects.json"
+  local aliases_json
+  local remote
+
+  [ -f "$registry" ] || return 1
+  aliases_json="$(default_aliases_json)"
+  remote="$(git_remote_url)"
+
+  node - "$registry" "$aliases_json" "$remote" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+const [registryPath, aliasesJson, remoteUrl] = process.argv.slice(2);
+const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+const root = path.dirname(path.dirname(registryPath));
+const aliases = new Set(JSON.parse(aliasesJson).map((value) => value.toLowerCase()));
+
+function remoteName(url) {
+  if (!url) return "";
+  const raw = url.split(/[/:]/).pop() || "";
+  return raw.replace(/\.git$/, "").toLowerCase();
+}
+
+function readManifest(project) {
+  if (!project.artifact_path) return {};
+  const manifestPath = path.join(root, project.artifact_path, "manifest.json");
+  if (!fs.existsSync(manifestPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+const remote = remoteUrl || "";
+const remoteBase = remoteName(remote);
+if (remoteBase) aliases.add(remoteBase);
+
+const matches = [];
+for (const project of registry.projects || []) {
+  const projectAliases = new Set([
+    project.project_id,
+    ...(project.aliases || []),
+  ].filter(Boolean).map((value) => String(value).toLowerCase()));
+  const manifest = readManifest(project);
+  const reasons = [];
+  let score = 0;
+
+  if (remote && manifest.source?.git_remote === remote) {
+    reasons.push("git remote");
+    score += 10;
+  }
+
+  if (aliases.has(String(project.project_id).toLowerCase())) {
+    reasons.push("project id");
+    score += 5;
+  }
+
+  for (const alias of aliases) {
+    if (projectAliases.has(alias)) {
+      reasons.push(`alias:${alias}`);
+      score += 3;
+      break;
+    }
+  }
+
+  if (score > 0) {
+    matches.push({ project_id: project.project_id, score, reasons });
+  }
+}
+
+matches.sort((a, b) => b.score - a.score || a.project_id.localeCompare(b.project_id));
+const bestScore = matches[0]?.score || 0;
+const best = matches.filter((match) => match.score === bestScore);
+
+if (best.length === 1) {
+  process.stdout.write(best[0].project_id);
+  process.exit(0);
+}
+
+if (matches.length > 1) {
+  console.error("multiple artifact projects match this repository; pass --project-id explicitly:");
+  for (const match of matches) {
+    console.error(`- ${match.project_id} (${match.reasons.join(", ")})`);
+  }
+  process.exit(2);
+}
+
+process.exit(1);
+NODE
+}
+
 ensure_control_context() {
   if [ ! -d "$target_dir/.sdd-control" ] || [ ! -f "$target_dir/AGENTS.md" ]; then
     "$repo_root/scripts/init_project.sh" "$target_dir" >/dev/null
@@ -297,11 +389,20 @@ NODE
 
 load_project_id() {
   local config="$target_dir/.sdd-control/project.json"
+  local resolved
   if [ "$project_id" != "" ]; then
     sanitize_project_id "$project_id"
     return
   fi
-  [ -f "$config" ] || die "missing $config; run artifacts init first or pass --project-id"
+  if [ ! -f "$config" ]; then
+    if resolved="$(resolve_project_id_from_artifacts)"; then
+      project_id="$(sanitize_project_id "$resolved")"
+      printf 'Resolved artifact project_id=%s from registry aliases\n' "$project_id" >&2
+      printf '%s' "$project_id"
+      return
+    fi
+    die "missing $config and could not resolve this repository from artifact aliases; run artifacts init first or pass --project-id"
+  fi
   node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if (!d.project_id) process.exit(1); process.stdout.write(d.project_id)' "$config"
 }
 

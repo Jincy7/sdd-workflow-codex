@@ -73,6 +73,8 @@ Use the control-plane artifact workflow when personal SDD/GSD state needs to mov
 - Synced artifacts are `AGENTS.md`, `.sdd-control/`, `.planning/`, and Superpowers `docs/superpowers/`.
 - Treat `docs/superpowers/` specs as personal drafts by default. Promote only reviewed, team-relevant specs into the project's shared docs tree.
 - GitHub tokens are read from `gh auth token` at runtime when `--gh-user` or `SDD_ARTIFACTS_GH_USER` is set; tokens are never written to project artifacts.
+- Superpowers does not read the central artifacts repo directly. Hydrate `docs/superpowers/` through this control plane before starting Superpowers planning/execution work.
+- `artifacts pull .` uses `.sdd-control/project.json` when present; otherwise it resolves the project from artifact registry aliases and the current git remote. If multiple projects match, pass `--project-id`.
 
 Commands:
 
@@ -80,10 +82,17 @@ Commands:
 scripts/sdd-control-plane.sh artifacts configure --repo <artifacts-repo-url> --gh-user <github-user>
 scripts/sdd-control-plane.sh artifacts init . --project-id <stable-id> --alias <old-name> --alias <new-name>
 scripts/sdd-control-plane.sh artifacts push .
+scripts/sdd-control-plane.sh artifacts pull .
 scripts/sdd-control-plane.sh artifacts checkpoint . --note "<completed task>"
 scripts/sdd-control-plane.sh artifacts pull . --project-id <stable-id>
 scripts/sdd-control-plane.sh artifacts status .
 ```
+
+At the start of work in a repository that may already have personal artifacts:
+
+1. Run `scripts/sdd-control-plane.sh artifacts pull .`.
+2. Then read `AGENTS.md` and `.sdd-control/PROJECT.md`.
+3. Then use Superpowers, GSD, or gstack as routed below.
 
 After meaningful code changes, use this sync route:
 
