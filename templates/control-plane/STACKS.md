@@ -8,12 +8,15 @@ This repository uses the real installed upstream stacks:
 | Engineering discipline | Superpowers | skill names such as `brainstorming`, `writing-plans`, `test-driven-development` | TDD, debugging, planning, verification discipline |
 | Specialist review | gstack | `$gstack-*` | CEO/eng/design/QA/security/release review |
 | Routing | SDD control plane | `$sdd-control-plane` | choose and sequence the upstream stacks |
+| Personal artifact sync | SDD artifacts | `scripts/sdd-control-plane.sh artifacts ...` | sync local workflow state by stable project id |
 
 ## Local Boundary
 
 Keep all project state scoped to this repository. Do not import state from another repo unless explicitly requested.
 
 By default this control-plane setup is personal. Keep `AGENTS.md`, `.sdd-control/`, and GSD `.planning/` out of shared git history unless the team explicitly opts in.
+
+For cross-machine sync, bind the project to a stable id in `.sdd-control/project.json` and sync to the private artifacts repository. Folder names and repo names are aliases, not identity.
 
 ## Recommended Route
 

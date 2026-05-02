@@ -25,6 +25,22 @@ Recommended GSD personal setting:
 
 - `.planning/config.json` -> `commit_docs: false`
 
+## Artifact Sync
+
+Use a stable project id that survives repo renames and local folder differences.
+
+Example:
+
+```sh
+scripts/sdd-control-plane.sh artifacts init . --project-id stable-project-id --alias current-folder-name --alias old-repo-name
+```
+
+Synced files:
+
+- `AGENTS.md`
+- `.sdd-control/`
+- `.planning/`
+
 ## Verification Commands
 
 - Control plane status: `scripts/sdd-control-plane.sh status` from the control plane repo.

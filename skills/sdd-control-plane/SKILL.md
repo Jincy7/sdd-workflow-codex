@@ -63,6 +63,24 @@ For non-trivial product or engineering work:
 - Prefer gstack when a specialist review lens or browser/release workflow is needed.
 - Prefer prefixed gstack skills (`$gstack-*`) to avoid collisions with GSD or Superpowers names.
 
+## Artifact Sync
+
+Use the control-plane artifact workflow when personal SDD/GSD state needs to move across machines or when the same codebase may appear under different repository names.
+
+- Stable identity is `.sdd-control/project.json.project_id`, not the repo folder name.
+- Aliases such as `compass` and `uhdc-compass` are metadata.
+- Sync target is the private artifacts repository, defaulting to `https://github.com/Jincy7/sdd-artifacts.git`.
+- Synced artifacts are `AGENTS.md`, `.sdd-control/`, and `.planning/`.
+
+Commands:
+
+```sh
+scripts/sdd-control-plane.sh artifacts init . --project-id <stable-id> --alias <old-name> --alias <new-name>
+scripts/sdd-control-plane.sh artifacts push .
+scripts/sdd-control-plane.sh artifacts pull . --project-id <stable-id>
+scripts/sdd-control-plane.sh artifacts status .
+```
+
 ## Minimum Completion Gate
 
 Do not call work complete until:

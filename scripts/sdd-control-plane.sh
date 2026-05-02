@@ -14,6 +14,7 @@ usage:
   scripts/sdd-control-plane.sh update [options]
   scripts/sdd-control-plane.sh status
   scripts/sdd-control-plane.sh init-project [path] [--force]
+  scripts/sdd-control-plane.sh artifacts <init|push|pull|status> [path] [options]
 
 install/update options:
   --skip-gsd
@@ -282,6 +283,9 @@ case "$cmd" in
     ;;
   init-project)
     "${repo_root}/scripts/init_project.sh" "$@"
+    ;;
+  artifacts)
+    "${repo_root}/scripts/artifacts.sh" "$@"
     ;;
   -h|--help|help)
     usage

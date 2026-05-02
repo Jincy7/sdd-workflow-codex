@@ -57,9 +57,38 @@ test -f "$team_dir/AGENTS.md"
 ! grep -q 'BEGIN sdd-control-plane personal workflow' "$team_dir/.git/info/exclude"
 test -n "$(git -C "$team_dir" status --short -- AGENTS.md .sdd-control)"
 
+artifacts_dir="$tmp_dir/artifacts"
+artifacts_remote="$tmp_dir/artifacts-remote.git"
+git init --bare -q "$artifacts_remote"
+"$repo_root/scripts/sdd-control-plane.sh" artifacts init "$project_dir" \
+  --dir "$artifacts_dir" \
+  --repo "$artifacts_remote" \
+  --project-id compass-a2a \
+  --display-name "Compass A2A Gateway" \
+  --alias compass \
+  --alias uhdc-compass \
+  --no-push >/tmp/sdd-control-plane-artifacts-init.log
+test -f "$project_dir/.sdd-control/project.json"
+test -f "$artifacts_dir/projects/compass-a2a/manifest.json"
+test -f "$artifacts_dir/projects/compass-a2a/planning/config.json"
+test -f "$artifacts_dir/projects/compass-a2a/sdd-control/project.json"
+test -f "$artifacts_dir/registry/projects.json"
+grep -q 'uhdc-compass' "$artifacts_dir/projects/compass-a2a/manifest.json"
+
+rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS.md"
+"$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$project_dir" \
+  --dir "$artifacts_dir" \
+  --repo "$artifacts_remote" \
+  --project-id compass-a2a >/tmp/sdd-control-plane-artifacts-pull.log
+test -f "$project_dir/AGENTS.md"
+test -f "$project_dir/.sdd-control/project.json"
+test -f "$project_dir/.planning/config.json"
+test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).project_id)' "$project_dir/.sdd-control/project.json")" = "compass-a2a"
+
 bash -n "$repo_root/install.sh"
 bash -n "$repo_root/scripts/sdd-control-plane.sh"
 bash -n "$repo_root/scripts/init_project.sh"
+bash -n "$repo_root/scripts/artifacts.sh"
 bash -n "$repo_root/scripts/test_install.sh"
 
 echo "All mock control-plane tests passed"

@@ -88,6 +88,57 @@ For a team-visible workflow that should be committed to the repo:
 /path/to/sdd-workflow-codex/scripts/init_project.sh --team .
 ```
 
+## Sync Personal Artifacts Across Machines
+
+Use the private artifacts repo to sync workflow state by stable project id, not repository name:
+
+```sh
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts init . \
+  --project-id compass-a2a \
+  --display-name "Compass A2A Gateway" \
+  --alias compass \
+  --alias uhdc-compass
+```
+
+This writes a local pointer:
+
+```text
+.sdd-control/project.json
+```
+
+and stores artifacts in the central repo:
+
+```text
+projects/compass-a2a/
+  manifest.json
+  AGENTS.md
+  sdd-control/
+  planning/
+registry/projects.json
+```
+
+Default artifacts repo:
+
+```text
+https://github.com/Jincy7/sdd-artifacts.git
+```
+
+Common commands:
+
+```sh
+# Push local AGENTS.md, .sdd-control/, and .planning/ to the artifacts repo
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts push .
+
+# Restore on another machine or after a repo rename
+/path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts pull . --project-id compass-a2a
+
+# Use a different local clone/cache path
+SDD_ARTIFACTS_DIR=~/.cache/sdd-artifacts \
+  /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts status .
+```
+
+Aliases such as `compass` and `uhdc-compass` are metadata only. The stable `project_id` is the identity.
+
 ## Control Plane Route
 
 The default route is:
