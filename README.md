@@ -80,20 +80,30 @@ Inside any repository you personally work in:
 This writes:
 
 ```text
-AGENTS.md
+AGENTS.md managed block
 .sdd-control/
+  AGENTS.md
   PROJECT.md
   STACKS.md
+```
+
+If `AGENTS.md` already exists, initialization preserves the rest of the file and only inserts or updates this block:
+
+```md
+<!-- BEGIN sdd-control-plane -->
+When using `$sdd-control-plane`, read `.sdd-control/AGENTS.md`, `.sdd-control/PROJECT.md`, and `.sdd-control/STACKS.md`.
+<!-- END sdd-control-plane -->
 ```
 
 By default, project initialization is **personal**. It updates the target repo's local `.git/info/exclude`, not the shared `.gitignore`, so these workflow artifacts stay off team branches:
 
 ```text
-AGENTS.md
 .sdd-control/
 .planning/
 docs/superpowers/
 ```
+
+`AGENTS.md` is not excluded. It stays visible to git as the thin Codex-readable layer, while SDD-specific routing details live under `.sdd-control/`.
 
 If official GSD has already created `.planning/config.json`, personal mode also sets:
 
@@ -147,14 +157,13 @@ and stores artifacts in the central repo:
 ```text
 projects/compass-a2a/
   manifest.json
-  AGENTS.md
   sdd-control/
   planning/
   superpowers/
 registry/projects.json
 ```
 
-`superpowers/` mirrors local `docs/superpowers/`. Treat those files as personal design drafts by default; promote a reviewed spec into the team's normal docs path only when it should become shared project truth.
+`sdd-control/` mirrors local `.sdd-control/`, including the SDD-specific agent routing file. The root `AGENTS.md` is not copied into artifacts; `pull` updates only the managed block so existing repo instructions are not overwritten. `superpowers/` mirrors local `docs/superpowers/`. Treat those files as personal design drafts by default; promote a reviewed spec into the team's normal docs path only when it should become shared project truth.
 
 At the start of work on a machine or checkout that may be stale:
 
@@ -167,7 +176,7 @@ At the start of work on a machine or checkout that may be stale:
 Common commands:
 
 ```sh
-# Push local AGENTS.md, .sdd-control/, .planning/, and docs/superpowers/ to the artifacts repo
+# Push local .sdd-control/, .planning/, and docs/superpowers/ to the artifacts repo
 /path/to/sdd-workflow-codex/scripts/sdd-control-plane.sh artifacts push .
 
 # Restore on another machine or after a repo rename

@@ -37,7 +37,6 @@ Environment:
 
 Artifact layout:
   projects/<project-id>/manifest.json
-  projects/<project-id>/AGENTS.md
   projects/<project-id>/sdd-control/
   projects/<project-id>/planning/
   projects/<project-id>/superpowers/
@@ -341,9 +340,7 @@ NODE
 }
 
 ensure_control_context() {
-  if [ ! -d "$target_dir/.sdd-control" ] || [ ! -f "$target_dir/AGENTS.md" ]; then
-    "$repo_root/scripts/init_project.sh" "$target_dir" >/dev/null
-  fi
+  "$repo_root/scripts/init_project.sh" "$target_dir" >/dev/null
 }
 
 ensure_local_project_config() {
@@ -648,9 +645,7 @@ copy_up() {
   project_dir="$(artifact_project_dir "$id")"
   mkdir -p "$project_dir"
 
-  if [ -f "$target_dir/AGENTS.md" ]; then
-    cp "$target_dir/AGENTS.md" "$project_dir/AGENTS.md"
-  fi
+  rm -f "$project_dir/AGENTS.md"
   if [ -d "$target_dir/.sdd-control" ]; then
     mkdir -p "$project_dir/sdd-control"
     rsync -a --delete "$target_dir/.sdd-control/" "$project_dir/sdd-control/"
@@ -674,9 +669,6 @@ copy_down() {
   [ -d "$project_dir" ] || die "missing artifact project directory: $project_dir"
 
   mkdir -p "$target_dir"
-  if [ -f "$project_dir/AGENTS.md" ]; then
-    cp "$project_dir/AGENTS.md" "$target_dir/AGENTS.md"
-  fi
   if [ -d "$project_dir/sdd-control" ]; then
     mkdir -p "$target_dir/.sdd-control"
     rsync -a --delete "$project_dir/sdd-control/" "$target_dir/.sdd-control/"

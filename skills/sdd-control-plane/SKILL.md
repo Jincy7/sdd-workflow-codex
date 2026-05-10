@@ -21,7 +21,8 @@ Treat the current repository root as the context boundary.
 - Re-read this repo's `AGENTS.md` before assuming stack routing.
 - Let official GSD create and own its own project planning files.
 - Use this control plane only to choose which upstream skill should run next.
-- Treat project initialization as personal by default: keep `AGENTS.md`, `.sdd-control/`, GSD `.planning/`, and Superpowers `docs/superpowers/` in `.git/info/exclude` unless the team explicitly opts in.
+- Treat project initialization as personal by default: `AGENTS.md` gets only a managed `sdd-control-plane` pointer block, while `.sdd-control/`, GSD `.planning/`, and Superpowers `docs/superpowers/` stay in `.git/info/exclude` unless the team explicitly opts in.
+- Do not overwrite repo-owned `AGENTS.md` content; update only the managed block between `<!-- BEGIN sdd-control-plane -->` and `<!-- END sdd-control-plane -->`.
 
 ## Default Route
 
@@ -72,7 +73,8 @@ Use the control-plane artifact workflow when personal SDD/GSD state needs to mov
 - Stable identity is `.sdd-control/project.json.project_id`, not the repo folder name.
 - Aliases such as `compass` and `uhdc-compass` are metadata.
 - Sync target comes from `~/.sdd-control/config.json`, `SDD_ARTIFACTS_REPO`, or an explicit `--repo`.
-- Synced artifacts are `AGENTS.md`, `.sdd-control/`, `.planning/`, and Superpowers `docs/superpowers/`.
+- Synced artifacts are `.sdd-control/`, `.planning/`, and Superpowers `docs/superpowers/`; root `AGENTS.md` is not copied into artifacts.
+- Artifact pull updates the root `AGENTS.md` managed block through `init_project.sh` instead of replacing the file.
 - Treat `docs/superpowers/` specs as personal drafts by default. Promote only reviewed, team-relevant specs into the project's shared docs tree.
 - GitHub tokens are read from `gh auth token` at runtime when `--gh-user` or `SDD_ARTIFACTS_GH_USER` is set; tokens are never written to project artifacts.
 - Superpowers does not read the central artifacts repo directly. Hydrate `docs/superpowers/` through this control plane before starting Superpowers planning/execution work.
@@ -113,7 +115,7 @@ This applies even when the only changed files are planning artifacts. The checkp
 At the start of work in a repository that may already have personal artifacts:
 
 1. Run `scripts/sdd-control-plane.sh artifacts pull .`.
-2. Then read `AGENTS.md` and `.sdd-control/PROJECT.md`.
+2. Then read `AGENTS.md`, `.sdd-control/AGENTS.md`, and `.sdd-control/PROJECT.md`.
 3. Then use Superpowers, GSD, or gstack as routed below.
 
 After meaningful code changes, use this sync route:

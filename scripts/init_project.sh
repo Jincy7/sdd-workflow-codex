@@ -11,15 +11,14 @@ usage:
   scripts/init_project.sh [path] [--personal|--team] [--force]
 
 Modes:
-  --personal  default. Create local workflow files and hide them via .git/info/exclude.
-  --team      Create workflow files without adding local excludes.
+  --personal  default. Create local workflow files and hide SDD state via .git/info/exclude.
+  --team      Create workflow files without adding local SDD state excludes.
 
-Personal mode writes:
-  AGENTS.md
+Initialization writes:
+  AGENTS.md managed block only
   .sdd-control/
 
-and hides these personal workflow artifacts from git status:
-  AGENTS.md
+Personal mode hides these personal workflow artifacts from git status:
   .sdd-control/
   .planning/
   docs/superpowers/
@@ -74,12 +73,63 @@ copy_file() {
   echo "wrote $dst"
 }
 
+agents_managed_block() {
+  cat <<'EOF'
+<!-- BEGIN sdd-control-plane -->
+When using `$sdd-control-plane`, read `.sdd-control/AGENTS.md`, `.sdd-control/PROJECT.md`, and `.sdd-control/STACKS.md`.
+<!-- END sdd-control-plane -->
+EOF
+}
+
+update_agents_managed_block() {
+  local dst="$1"
+  local tmp
+  local trimmed
+  local marker="<!-- BEGIN sdd-control-plane -->"
+  local end_marker="<!-- END sdd-control-plane -->"
+
+  mkdir -p "$(dirname "$dst")"
+  tmp="$(mktemp)"
+  trimmed="$(mktemp)"
+
+  if [ -e "$dst" ] || [ -L "$dst" ]; then
+    awk -v marker="$marker" -v end_marker="$end_marker" '
+      $0 == marker { in_block = 1; next }
+      $0 == end_marker { in_block = 0; next }
+      in_block { next }
+      { print }
+    ' "$dst" > "$tmp"
+  else
+    : > "$tmp"
+  fi
+
+  awk '
+    { lines[NR] = $0 }
+    END {
+      last = NR
+      while (last > 0 && lines[last] == "") last--
+      for (i = 1; i <= last; i++) print lines[i]
+    }
+  ' "$tmp" > "$trimmed"
+
+  if [ -s "$trimmed" ]; then
+    cat "$trimmed" > "$dst"
+    printf '\n\n' >> "$dst"
+  else
+    : > "$dst"
+  fi
+  agents_managed_block >> "$dst"
+  printf '\n' >> "$dst"
+
+  rm -f "$tmp" "$trimmed"
+  echo "updated managed sdd-control-plane block in $dst"
+}
+
 append_personal_excludes() {
   local exclude_path
   local marker="# BEGIN sdd-control-plane personal workflow"
   local end_marker="# END sdd-control-plane personal workflow"
   local lines=(
-    "AGENTS.md"
     ".sdd-control/"
     ".planning/"
     "docs/superpowers/"
@@ -150,7 +200,8 @@ NODE
 
 mkdir -p "$target_dir/.sdd-control"
 
-copy_file "$repo_root/templates/AGENTS.md" "$target_dir/AGENTS.md"
+update_agents_managed_block "$target_dir/AGENTS.md"
+copy_file "$repo_root/templates/control-plane/AGENTS.md" "$target_dir/.sdd-control/AGENTS.md"
 copy_file "$repo_root/templates/control-plane/STACKS.md" "$target_dir/.sdd-control/STACKS.md"
 copy_file "$repo_root/templates/control-plane/PROJECT.md" "$target_dir/.sdd-control/PROJECT.md"
 

@@ -131,21 +131,38 @@ grep -q "$preview_path" /tmp/sdd-control-plane-preview.log
 
 "$repo_root/scripts/init_project.sh" "$project_dir" >/tmp/sdd-control-plane-init.log
 test -f "$project_dir/AGENTS.md"
+test -f "$project_dir/.sdd-control/AGENTS.md"
 test -f "$project_dir/.sdd-control/STACKS.md"
 test -f "$project_dir/.sdd-control/PROJECT.md"
+grep -q 'BEGIN sdd-control-plane' "$project_dir/AGENTS.md"
+grep -q 'read `.sdd-control/AGENTS.md`, `.sdd-control/PROJECT.md`, and `.sdd-control/STACKS.md`' "$project_dir/AGENTS.md"
+grep -q 'Stack Routing' "$project_dir/.sdd-control/AGENTS.md"
 grep -q 'BEGIN sdd-control-plane personal workflow' "$project_dir/.git/info/exclude"
-grep -q '^AGENTS.md$' "$project_dir/.git/info/exclude"
+! grep -q '^AGENTS.md$' "$project_dir/.git/info/exclude"
 grep -q '^.sdd-control/$' "$project_dir/.git/info/exclude"
 grep -q '^.planning/$' "$project_dir/.git/info/exclude"
 grep -q '^docs/superpowers/$' "$project_dir/.git/info/exclude"
-test "$(git -C "$project_dir" status --short -- AGENTS.md .sdd-control .planning docs/superpowers)" = ""
+test "$(git -C "$project_dir" status --short -- .sdd-control .planning docs/superpowers)" = ""
+test -n "$(git -C "$project_dir" status --short -- AGENTS.md)"
 test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).commit_docs)' "$project_dir/.planning/config.json")" = "false"
+
+existing_agents_dir="$tmp_dir/existing-agents-project"
+mkdir -p "$existing_agents_dir"
+git -C "$existing_agents_dir" init -q
+printf '%s\n' '# Team Agents' '' 'Keep this team-owned file.' > "$existing_agents_dir/AGENTS.md"
+"$repo_root/scripts/init_project.sh" --force "$existing_agents_dir" >/tmp/sdd-control-plane-existing-agents-init.log
+grep -q 'Keep this team-owned file.' "$existing_agents_dir/AGENTS.md"
+grep -q 'BEGIN sdd-control-plane' "$existing_agents_dir/AGENTS.md"
+grep -q 'read `.sdd-control/AGENTS.md`, `.sdd-control/PROJECT.md`, and `.sdd-control/STACKS.md`' "$existing_agents_dir/AGENTS.md"
+test "$(grep -c 'BEGIN sdd-control-plane' "$existing_agents_dir/AGENTS.md")" = "1"
+! grep -q '^AGENTS.md$' "$existing_agents_dir/.git/info/exclude"
 
 team_dir="$tmp_dir/team-project"
 mkdir -p "$team_dir"
 git -C "$team_dir" init -q
 "$repo_root/scripts/init_project.sh" --team "$team_dir" >/tmp/sdd-control-plane-team-init.log
 test -f "$team_dir/AGENTS.md"
+grep -q 'BEGIN sdd-control-plane' "$team_dir/AGENTS.md"
 ! grep -q 'BEGIN sdd-control-plane personal workflow' "$team_dir/.git/info/exclude"
 test -n "$(git -C "$team_dir" status --short -- AGENTS.md .sdd-control)"
 
@@ -162,6 +179,8 @@ git init --bare -q "$artifacts_remote"
   --no-push >/tmp/sdd-control-plane-artifacts-init.log
 test -f "$project_dir/.sdd-control/project.json"
 test -f "$artifacts_dir/projects/compass-a2a/manifest.json"
+test ! -f "$artifacts_dir/projects/compass-a2a/AGENTS.md"
+test -f "$artifacts_dir/projects/compass-a2a/sdd-control/AGENTS.md"
 test -f "$artifacts_dir/projects/compass-a2a/planning/config.json"
 test -f "$artifacts_dir/projects/compass-a2a/sdd-control/project.json"
 test -f "$artifacts_dir/projects/compass-a2a/superpowers/specs/sample.md"
@@ -180,6 +199,23 @@ git -C "$renamed_dir" init -q
 grep -q 'Resolved artifact project_id=compass-a2a' /tmp/sdd-control-plane-artifacts-pull-resolved.log
 test -f "$renamed_dir/docs/superpowers/specs/sample.md"
 test "$(node -e 'const fs=require("fs"); const p=process.argv[1]; console.log(JSON.parse(fs.readFileSync(p,"utf8")).project_id)' "$renamed_dir/.sdd-control/project.json")" = "compass-a2a"
+
+printf '%s\n' '# Artifact Legacy Agents' > "$artifacts_dir/projects/compass-a2a/AGENTS.md"
+existing_pull_dir="$tmp_dir/existing-pull-project"
+mkdir -p "$existing_pull_dir"
+git -C "$existing_pull_dir" init -q
+printf '%s\n' '# Existing Agents' '' 'Do not replace this.' > "$existing_pull_dir/AGENTS.md"
+"$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$existing_pull_dir" \
+  --dir "$artifacts_dir" \
+  --repo "$artifacts_remote" \
+  --project-id compass-a2a >/tmp/sdd-control-plane-artifacts-pull-existing.log
+grep -q 'Do not replace this.' "$existing_pull_dir/AGENTS.md"
+! grep -q 'Artifact Legacy Agents' "$existing_pull_dir/AGENTS.md"
+grep -q 'BEGIN sdd-control-plane' "$existing_pull_dir/AGENTS.md"
+test "$(grep -c 'BEGIN sdd-control-plane' "$existing_pull_dir/AGENTS.md")" = "1"
+test -f "$existing_pull_dir/.sdd-control/project.json"
+test -f "$existing_pull_dir/.sdd-control/AGENTS.md"
+! grep -q '^AGENTS.md$' "$existing_pull_dir/.git/info/exclude"
 
 rm -rf "$project_dir/.planning" "$project_dir/.sdd-control" "$project_dir/AGENTS.md" "$project_dir/docs/superpowers"
 "$repo_root/scripts/sdd-control-plane.sh" artifacts pull "$project_dir" \
@@ -201,7 +237,8 @@ test -f "$project_dir/.sdd-control/REPO-SNAPSHOT.md"
 test -f "$project_dir/.sdd-control/repo-snapshot.json"
 test -f "$artifacts_dir/projects/compass-a2a/sdd-control/REPO-SNAPSHOT.md"
 grep -q 'finished sample task' "$project_dir/.sdd-control/REPO-SNAPSHOT.md"
-grep -q '"dirty": false' "$project_dir/.sdd-control/repo-snapshot.json"
+grep -q '"dirty": true' "$project_dir/.sdd-control/repo-snapshot.json"
+grep -q 'AGENTS.md' "$project_dir/.sdd-control/repo-snapshot.json"
 grep -q '"local_name": "project"' "$project_dir/.sdd-control/repo-snapshot.json"
 
 bash -n "$repo_root/install.sh"
