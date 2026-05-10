@@ -14,6 +14,7 @@ usage:
   scripts/sdd-control-plane.sh update [options]
   scripts/sdd-control-plane.sh status
   scripts/sdd-control-plane.sh init-project [path] [--force]
+  scripts/sdd-control-plane.sh preview [path] [--output FILE] [--open]
   scripts/sdd-control-plane.sh artifacts <init|push|pull|status> [path] [options]
 
 install/update options:
@@ -283,6 +284,10 @@ case "$cmd" in
     ;;
   init-project)
     "${repo_root}/scripts/init_project.sh" "$@"
+    ;;
+  preview)
+    need_cmd node
+    node "${repo_root}/scripts/preview.js" "$@"
     ;;
   artifacts)
     "${repo_root}/scripts/artifacts.sh" "$@"

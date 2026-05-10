@@ -37,6 +37,8 @@ For non-trivial product or engineering work:
 3. Spec and plan:
    - Use `$gsd-discuss-phase`, `$gsd-spec-phase`, or `$gsd-plan-phase` for durable planning.
    - Use Superpowers `brainstorming` and `writing-plans` when the task needs detailed implementation sequencing.
+   - After a spec or plan artifact is produced, run `scripts/sdd-control-plane.sh preview .` to render `.planning/phases/` and `docs/superpowers/` as a local HTML review tree.
+   - When a spec or plan artifact changes later, regenerate the preview and checkpoint artifacts even if no source code changed.
 4. Architecture and design review:
    - Use `$gstack-plan-eng-review` for architecture, data flow, edge cases, and tests.
    - Use `$gstack-plan-design-review` for UI/UX work.
@@ -87,6 +89,26 @@ scripts/sdd-control-plane.sh artifacts checkpoint . --note "<completed task>"
 scripts/sdd-control-plane.sh artifacts pull . --project-id <stable-id>
 scripts/sdd-control-plane.sh artifacts status .
 ```
+
+## Planning Preview
+
+Use the preview command when the human wants to inspect completed spec/plan artifacts visually before moving into review or execution:
+
+```sh
+scripts/sdd-control-plane.sh preview .
+scripts/sdd-control-plane.sh preview . --open
+scripts/sdd-control-plane.sh preview . --output /tmp/sdd-preview.html
+```
+
+The preview is a read-only visualization over upstream-owned documents. It discovers GSD phase artifacts in `.planning/phases/` and Superpowers artifacts in `docs/superpowers/specs/` and `docs/superpowers/plans/`, then writes a static HTML tree to `.sdd-control/previews/latest.html` by default.
+
+After a plan/spec update, use this sync route:
+
+1. Let the upstream tool finish writing `.planning/` or `docs/superpowers/`.
+2. Run `scripts/sdd-control-plane.sh preview .`.
+3. Run `scripts/sdd-control-plane.sh artifacts checkpoint . --note "updated plan/spec preview"`.
+
+This applies even when the only changed files are planning artifacts. The checkpoint syncs `.planning/`, `docs/superpowers/`, and `.sdd-control/previews/` through the personal artifacts repo.
 
 At the start of work in a repository that may already have personal artifacts:
 

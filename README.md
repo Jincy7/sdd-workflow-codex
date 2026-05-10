@@ -44,6 +44,31 @@ By default, gstack runs with `GSTACK_SKIP_COREUTILS=1` to avoid Homebrew side ef
 scripts/sdd-control-plane.sh status
 ```
 
+## Planning Preview
+
+After GSD or Superpowers finishes a spec/plan pass, generate a local visual tree of the planning artifacts:
+
+```sh
+scripts/sdd-control-plane.sh preview .
+```
+
+This writes:
+
+```text
+.sdd-control/previews/latest.html
+```
+
+The preview reads upstream-owned artifacts from `.planning/phases/` and `docs/superpowers/`; it does not create or mutate GSD, Superpowers, or gstack planning state. Use `--output FILE` to choose another HTML path, or `--open` to open it after generation.
+
+When a plan or spec changes, regenerate the preview and checkpoint artifacts even if no source code changed:
+
+```sh
+scripts/sdd-control-plane.sh preview .
+scripts/sdd-control-plane.sh artifacts checkpoint . --note "updated plan/spec preview"
+```
+
+This syncs `.planning/`, `docs/superpowers/`, and `.sdd-control/previews/` through the personal artifacts repo.
+
 ## Initialize A Project As A Personal Workflow
 
 Inside any repository you personally work in:
@@ -175,6 +200,14 @@ $gsd-progress or $gsd-verify-work
 
 `checkpoint` records the current git branch, HEAD, dirty status, and whether `.planning/codebase/` appears stale against HEAD. It does not rewrite GSD's semantic docs by itself; official GSD owns that.
 
+For plan/spec-only updates, use:
+
+```text
+$gsd-spec-phase/$gsd-plan-phase or Superpowers planning
+-> scripts/sdd-control-plane.sh preview .
+-> scripts/sdd-control-plane.sh artifacts checkpoint . --note "updated plan/spec preview"
+```
+
 ## Control Plane Route
 
 The default route is:
@@ -182,6 +215,7 @@ The default route is:
 ```text
 gstack office-hours/CEO review
 -> GSD spec/plan phase
+-> scripts/sdd-control-plane.sh preview .
 -> gstack eng/design review
 -> Superpowers TDD/execution discipline
 -> GSD execute/verify

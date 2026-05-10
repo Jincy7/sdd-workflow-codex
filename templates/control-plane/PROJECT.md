@@ -51,6 +51,31 @@ Synced files:
 
 Keep Superpowers specs personal by default. When a spec becomes shared product or architecture truth, move or copy the reviewed version into the team's normal docs path and commit that promoted document.
 
+## Planning Preview
+
+After a spec or plan pass, generate a local HTML tree preview:
+
+```sh
+scripts/sdd-control-plane.sh preview .
+```
+
+Default output:
+
+```text
+.sdd-control/previews/latest.html
+```
+
+The preview reads `.planning/phases/` and `docs/superpowers/` only. It is a visual review aid, not a replacement for GSD or Superpowers planning state.
+
+When a plan or spec changes later, regenerate and sync the preview even if no source code changed:
+
+```sh
+scripts/sdd-control-plane.sh preview .
+scripts/sdd-control-plane.sh artifacts checkpoint . --note "updated plan/spec preview"
+```
+
+The checkpoint syncs `.planning/`, `docs/superpowers/`, and `.sdd-control/previews/` through the personal artifacts repo.
+
 Start-of-work sync:
 
 ```sh
@@ -66,6 +91,8 @@ scripts/sdd-control-plane.sh artifacts checkpoint . --note "completed task"
 ```
 
 Run `$gsd-map-codebase` before checkpointing when the repository structure, architecture, stack, integrations, conventions, or testing shape changed.
+
+For plan/spec-only updates, run `scripts/sdd-control-plane.sh preview .` before checkpointing so the HTML preview stays in sync with the upstream planning artifacts.
 
 ## Verification Commands
 

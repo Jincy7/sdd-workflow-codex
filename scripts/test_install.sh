@@ -14,6 +14,64 @@ mkdir -p "$project_dir/.planning"
 printf '%s\n' '{"commit_docs":true}' > "$project_dir/.planning/config.json"
 mkdir -p "$project_dir/docs/superpowers/specs"
 printf '%s\n' '# Sample Superpowers Spec' > "$project_dir/docs/superpowers/specs/sample.md"
+mkdir -p "$project_dir/docs/superpowers/plans"
+cat > "$project_dir/docs/superpowers/plans/sample-plan.md" <<'EOF'
+# Sample Superpowers Plan
+
+**Goal:** Ship a visible planning preview.
+
+## Task 1: Render Preview
+
+- [ ] **Step 1: Generate HTML**
+- [ ] **Step 2: Verify tree output**
+EOF
+mkdir -p "$project_dir/.planning/phases/01-preview-flow"
+cat > "$project_dir/.planning/phases/01-preview-flow/01-SPEC.md" <<'EOF'
+# Phase 1: Preview Flow - Specification
+
+## Goal
+
+Show plan and spec artifacts as a readable tree.
+
+## Requirements
+
+1. **Preview command**: Generate an HTML tree preview after planning.
+   - Acceptance: The generated document includes requirements and acceptance criteria.
+
+## Acceptance Criteria
+
+- [ ] Preview includes the spec title.
+- [ ] Preview escapes <script>alert("x")</script> text.
+EOF
+cat > "$project_dir/.planning/phases/01-preview-flow/01-01-PLAN.md" <<'EOF'
+---
+phase: 01-preview-flow
+plan: 01
+type: execute
+wave: 1
+depends_on: []
+files_modified:
+  - scripts/preview.js
+requirements: [PREVIEW-01]
+---
+
+<objective>
+Create a static visual preview for completed planning artifacts.
+</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1: Build preview renderer</name>
+  <files>scripts/preview.js</files>
+  <verify>node scripts/preview.js .</verify>
+  <acceptance_criteria>
+    - Preview contains a tree.
+    - Preview contains plan tasks.
+  </acceptance_criteria>
+  <done>HTML preview is written.</done>
+</task>
+</tasks>
+EOF
 mkdir -p "$HOME/.codex/skills/old-skill.backup.20000101000000"
 printf '%s\n' '---' 'name: old-skill' 'description: invalid: unquoted' '---' > "$HOME/.codex/skills/old-skill.backup.20000101000000/SKILL.md"
 
@@ -39,6 +97,37 @@ grep -q 'ok   GSD' /tmp/sdd-control-plane-status.log
 grep -q 'ok   Superpowers' /tmp/sdd-control-plane-status.log
 grep -q 'ok   gstack' /tmp/sdd-control-plane-status.log
 grep -q 'ok   Control plane' /tmp/sdd-control-plane-status.log
+
+"$repo_root/scripts/sdd-control-plane.sh" preview "$project_dir" >/tmp/sdd-control-plane-preview.log
+preview_path="$project_dir/.sdd-control/previews/latest.html"
+test -f "$preview_path"
+grep -q 'SDD Planning Preview' "$preview_path"
+grep -q 'Phase 1: Preview Flow - Specification' "$preview_path"
+grep -q 'Preview command' "$preview_path"
+grep -q 'Task 1: Build preview renderer' "$preview_path"
+grep -q 'Sample Superpowers Plan' "$preview_path"
+grep -q '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;' "$preview_path"
+grep -q 'id="cy"' "$preview_path"
+grep -q 'cytoscape@3.33.3' "$preview_path"
+grep -q 'cytoscape-dagre@2.5.0' "$preview_path"
+grep -q 'const PREVIEW_GRAPH =' "$preview_path"
+grep -q 'cy.on("tap", "node"' "$preview_path"
+grep -q 'id="reset-overview"' "$preview_path"
+grep -q 'id="collapse-all"' "$preview_path"
+grep -q 'id="expand-all"' "$preview_path"
+grep -q 'id="full-view"' "$preview_path"
+grep -q 'function applyVisibleGraph' "$preview_path"
+grep -q 'function toggleNodeCollapse' "$preview_path"
+grep -q 'let currentRankDir = "LR"' "$preview_path"
+grep -q 'function setRootDepthState(maxDepth = 1)' "$preview_path"
+grep -q 'function expandSelectedNodeOneLevel' "$preview_path"
+grep -q 'function collapseSelectedNodeOneLevel' "$preview_path"
+grep -q 'class="inspector-actions"' "$preview_path"
+grep -q 'makeInspectorButton("go-document", "Move")' "$preview_path"
+grep -q 'id="back-to-graph"' "$preview_path"
+grep -q 'function scrollToSelectedDocument' "$preview_path"
+grep -q 'selectGraphNode(event.target, false)' "$preview_path"
+grep -q "$preview_path" /tmp/sdd-control-plane-preview.log
 
 "$repo_root/scripts/init_project.sh" "$project_dir" >/tmp/sdd-control-plane-init.log
 test -f "$project_dir/AGENTS.md"
@@ -120,5 +209,6 @@ bash -n "$repo_root/scripts/sdd-control-plane.sh"
 bash -n "$repo_root/scripts/init_project.sh"
 bash -n "$repo_root/scripts/artifacts.sh"
 bash -n "$repo_root/scripts/test_install.sh"
+node --check "$repo_root/scripts/preview.js"
 
 echo "All mock control-plane tests passed"
